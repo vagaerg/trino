@@ -47,23 +47,23 @@ opa.policy.batched-uri=https://your-opa-endpoint/v1/data/batch
 
 ### All configuration entries
 
-| Configuration name                   | Required | Default | Description                                                                                                                                              |
-|--------------------------------------|:--------:|:-------:|----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `opa.policy.uri`                     |   Yes    |   N/A   | Endpoint to query OPA                                                                                                                                    |
-| `opa.policy.batched-uri`             |    No    |  Unset  | Endpoint for batch OPA requests                                                                                                                          |
-| `opa.log-requests`                   |    No    | `false` | Determines whether requests (URI, headers and entire body) are logged prior to sending them to OPA                                                       |
-| `opa.log-responses`                  |    No    | `false` | Determines whether OPA responses (URI, status code, headers and entire body) are logged                                                                  |
-| `opa.allow-permissioning-operations` |    No    | `false` | Determines whether permissioning operations will be allowed. These operations will be allowed or denied based on this setting, no request is sent to OPA |
-| `opa.http-client.*`                  |    No    |  Unset  | Additional HTTP client configurations that get passed down. E.g. `opa.http-client.http-proxy` for configuring the HTTP proxy                             |
+| Configuration name                           | Required | Default | Description                                                                                                                                                             |
+|----------------------------------------------|:--------:|:-------:|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `opa.policy.uri`                             |   Yes    |   N/A   | Endpoint to query OPA                                                                                                                                                   |
+| `opa.policy.batched-uri`                     |    No    |  Unset  | Endpoint for batch OPA requests                                                                                                                                         |
+| `opa.log-requests`                           |    No    | `false` | Determines whether requests (URI, headers and entire body) are logged prior to sending them to OPA                                                                      |
+| `opa.log-responses`                          |    No    | `false` | Determines whether OPA responses (URI, status code, headers and entire body) are logged                                                                                 |
+| `opa.allow-permission-management-operations` |    No    | `false` | Determines whether permission / role management operations will be allowed. These operations will be allowed or denied based on this setting, no request is sent to OPA |
+| `opa.http-client.*`                          |    No    |  Unset  | Additional HTTP client configurations that get passed down. E.g. `opa.http-client.http-proxy` for configuring the HTTP proxy                                            |
 
 > When request / response logging is enabled, they will be logged at DEBUG level under the `io.trino.plugin.opa.OpaHttpClient` logger, you will need to update
 > your log configuration accordingly.
 >
 > Be aware that enabling these options will produce very large amounts of logs
 
-##### About permissioning operations
+##### About permission management operations
 
-The following operations are controlled by the `opa.allow-permissioning-operations` setting. If this setting is `true`, these
+The following operations are controlled by the `opa.allow-permission-management-operations` setting. If this setting is `true`, these
 operations will be allowed; they will otherwise be denied. No request is sent to OPA either way:
 
 - `GrantSchemaPrivilege`
