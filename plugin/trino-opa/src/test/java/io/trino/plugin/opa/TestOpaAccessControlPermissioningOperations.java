@@ -136,12 +136,12 @@ public class TestOpaAccessControlPermissioningOperations
         assertThat(mockClient.getRequests()).isEmpty();
     }
 
-    private static OpaAccessControl createAuthorizer(boolean allowPermissioningOperations, InstrumentedHttpClient mockClient)
+    private static OpaAccessControl createAuthorizer(boolean allowPermissionManagementOperations, InstrumentedHttpClient mockClient)
     {
         return (OpaAccessControl) OpaAccessControlFactory.create(
                 ImmutableMap.<String, String>builder()
                         .put("opa.policy.uri", OPA_SERVER_URI.toString())
-                        .put("opa.allow-permissioning-operations", String.valueOf(allowPermissioningOperations))
+                        .put("opa.allow-permission-management-operations", String.valueOf(allowPermissionManagementOperations))
                         .buildOrThrow(),
                 Optional.of(mockClient),
                 Optional.of(SYSTEM_ACCESS_CONTROL_CONTEXT));

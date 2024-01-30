@@ -81,14 +81,14 @@ public sealed class OpaAccessControl
         permits OpaBatchAccessControl
 {
     private final OpaHighLevelClient opaHighLevelClient;
-    private final boolean allowPermissioningOperations;
+    private final boolean allowPermissionManagementOperations;
     private final OpaPluginContext pluginContext;
 
     @Inject
     public OpaAccessControl(OpaHighLevelClient opaHighLevelClient, OpaConfig config, OpaPluginContext pluginContext)
     {
         this.opaHighLevelClient = requireNonNull(opaHighLevelClient, "opaHighLevelClient is null");
-        this.allowPermissioningOperations = config.getAllowPermissioningOperations();
+        this.allowPermissionManagementOperations = config.getAllowPermissionManagementOperations();
         this.pluginContext = requireNonNull(pluginContext, "pluginContext is null");
     }
 
@@ -550,61 +550,61 @@ public sealed class OpaAccessControl
     @Override
     public void checkCanGrantSchemaPrivilege(SystemSecurityContext context, Privilege privilege, CatalogSchemaName schema, TrinoPrincipal grantee, boolean grantOption)
     {
-        enforcePermissioningOperation(AccessDeniedException::denyGrantSchemaPrivilege, privilege.toString(), schema.toString());
+        enforcePermissionManagementOperation(AccessDeniedException::denyGrantSchemaPrivilege, privilege.toString(), schema.toString());
     }
 
     @Override
     public void checkCanDenySchemaPrivilege(SystemSecurityContext context, Privilege privilege, CatalogSchemaName schema, TrinoPrincipal grantee)
     {
-        enforcePermissioningOperation(AccessDeniedException::denyDenySchemaPrivilege, privilege.toString(), schema.toString());
+        enforcePermissionManagementOperation(AccessDeniedException::denyDenySchemaPrivilege, privilege.toString(), schema.toString());
     }
 
     @Override
     public void checkCanRevokeSchemaPrivilege(SystemSecurityContext context, Privilege privilege, CatalogSchemaName schema, TrinoPrincipal revokee, boolean grantOption)
     {
-        enforcePermissioningOperation(AccessDeniedException::denyRevokeSchemaPrivilege, privilege.toString(), schema.toString());
+        enforcePermissionManagementOperation(AccessDeniedException::denyRevokeSchemaPrivilege, privilege.toString(), schema.toString());
     }
 
     @Override
     public void checkCanGrantTablePrivilege(SystemSecurityContext context, Privilege privilege, CatalogSchemaTableName table, TrinoPrincipal grantee, boolean grantOption)
     {
-        enforcePermissioningOperation(AccessDeniedException::denyGrantTablePrivilege, privilege.toString(), table.toString());
+        enforcePermissionManagementOperation(AccessDeniedException::denyGrantTablePrivilege, privilege.toString(), table.toString());
     }
 
     @Override
     public void checkCanDenyTablePrivilege(SystemSecurityContext context, Privilege privilege, CatalogSchemaTableName table, TrinoPrincipal grantee)
     {
-        enforcePermissioningOperation(AccessDeniedException::denyDenyTablePrivilege, privilege.toString(), table.toString());
+        enforcePermissionManagementOperation(AccessDeniedException::denyDenyTablePrivilege, privilege.toString(), table.toString());
     }
 
     @Override
     public void checkCanRevokeTablePrivilege(SystemSecurityContext context, Privilege privilege, CatalogSchemaTableName table, TrinoPrincipal revokee, boolean grantOption)
     {
-        enforcePermissioningOperation(AccessDeniedException::denyRevokeTablePrivilege, privilege.toString(), table.toString());
+        enforcePermissionManagementOperation(AccessDeniedException::denyRevokeTablePrivilege, privilege.toString(), table.toString());
     }
 
     @Override
     public void checkCanCreateRole(SystemSecurityContext context, String role, Optional<TrinoPrincipal> grantor)
     {
-        enforcePermissioningOperation(AccessDeniedException::denyCreateRole, role);
+        enforcePermissionManagementOperation(AccessDeniedException::denyCreateRole, role);
     }
 
     @Override
     public void checkCanDropRole(SystemSecurityContext context, String role)
     {
-        enforcePermissioningOperation(AccessDeniedException::denyDropRole, role);
+        enforcePermissionManagementOperation(AccessDeniedException::denyDropRole, role);
     }
 
     @Override
     public void checkCanGrantRoles(SystemSecurityContext context, Set<String> roles, Set<TrinoPrincipal> grantees, boolean adminOption, Optional<TrinoPrincipal> grantor)
     {
-        enforcePermissioningOperation(AccessDeniedException::denyGrantRoles, roles, grantees);
+        enforcePermissionManagementOperation(AccessDeniedException::denyGrantRoles, roles, grantees);
     }
 
     @Override
     public void checkCanRevokeRoles(SystemSecurityContext context, Set<String> roles, Set<TrinoPrincipal> grantees, boolean adminOption, Optional<TrinoPrincipal> grantor)
     {
-        enforcePermissioningOperation(AccessDeniedException::denyRevokeRoles, roles, grantees);
+        enforcePermissionManagementOperation(AccessDeniedException::denyRevokeRoles, roles, grantees);
     }
 
     @Override
@@ -736,16 +736,16 @@ public sealed class OpaAccessControl
                 OpaQueryInputResource.builder().table(new TrinoTable(table).withColumns(columns)).build());
     }
 
-    private <T> void enforcePermissioningOperation(Consumer<T> deny, T arg)
+    private <T> void enforcePermissionManagementOperation(Consumer<T> deny, T arg)
     {
-        if (!allowPermissioningOperations) {
+        if (!allowPermissionManagementOperations) {
             deny.accept(arg);
         }
     }
 
-    private <T, U> void enforcePermissioningOperation(BiConsumer<T, U> deny, T arg1, U arg2)
+    private <T, U> void enforcePermissionManagementOperation(BiConsumer<T, U> deny, T arg1, U arg2)
     {
-        if (!allowPermissioningOperations) {
+        if (!allowPermissionManagementOperations) {
             deny.accept(arg1, arg2);
         }
     }
