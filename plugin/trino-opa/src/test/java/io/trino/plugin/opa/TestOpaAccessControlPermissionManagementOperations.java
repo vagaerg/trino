@@ -37,7 +37,7 @@ import static io.trino.plugin.opa.TestHelpers.systemSecurityContextFromIdentity;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class TestOpaAccessControlPermissioningOperations
+public class TestOpaAccessControlPermissionManagementOperations
 {
     private static final URI OPA_SERVER_URI = URI.create("http://my-uri/");
     private static final Identity REQUESTING_IDENTITY = Identity.ofUser("source-user");
