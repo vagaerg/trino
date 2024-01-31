@@ -15,7 +15,7 @@ package io.trino.plugin.opa;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableSet;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
 import io.trino.execution.QueryIdGenerator;
@@ -25,19 +25,15 @@ import io.trino.spi.security.AccessDeniedException;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.SystemAccessControlFactory;
 import io.trino.spi.security.SystemSecurityContext;
-import org.junit.jupiter.api.Named;
-import org.junit.jupiter.params.provider.Arguments;
 
 import java.net.URI;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.net.MediaType.JSON_UTF_8;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public final class TestHelpers
 {
@@ -60,51 +56,13 @@ public final class TestHelpers
     public static final MockResponse MALFORMED_RESPONSE = new MockResponse("""
             { "this"": is broken_json; }
             """,
-            200);
-    public static final MockResponse UNDEFINED_RESPONSE = new MockResponse("{}", 404);
-    public static final MockResponse BAD_REQUEST_RESPONSE = new MockResponse("{}", 400);
+            200); public static final MockResponse UNDEFINED_RESPONSE = new MockResponse("{}", 404); public static final MockResponse BAD_REQUEST_RESPONSE = new MockResponse("{}", 400);
     public static final MockResponse SERVER_ERROR_RESPONSE = new MockResponse("", 500);
     public static final SystemAccessControlFactory.SystemAccessControlContext SYSTEM_ACCESS_CONTROL_CONTEXT = new TestingSystemAccessControlContext("TEST_VERSION");
-
-    public static Stream<Arguments> createFailingTestCases(Stream<Arguments> baseTestCases)
-    {
-        return Sets.cartesianProduct(
-                        baseTestCases.collect(toImmutableSet()),
-                        allErrorCasesArgumentProvider().collect(toImmutableSet()))
-                .stream()
-                .map(items -> Arguments.of(items.stream().flatMap((args) -> Arrays.stream(args.get())).toArray()));
-    }
-
-    public static Stream<Arguments> createIllegalResponseTestCases(Stream<Arguments> baseTestCases)
-    {
-        return Sets.cartesianProduct(
-                        baseTestCases.collect(toImmutableSet()),
-                        illegalResponseArgumentProvider().collect(toImmutableSet()))
-                .stream()
-                .map(items -> Arguments.of(items.stream().flatMap((args) -> Arrays.stream(args.get())).toArray()));
-    }
-
-    public static Stream<Arguments> illegalResponseArgumentProvider()
-    {
-        // Invalid responses from OPA
-        return Stream.of(
-                Arguments.of(Named.of("Undefined policy response", UNDEFINED_RESPONSE), OpaQueryException.OpaServerError.PolicyNotFound.class, "did not return a value"),
-                Arguments.of(Named.of("Bad request response", BAD_REQUEST_RESPONSE), OpaQueryException.OpaServerError.class, "returned status 400"),
-                Arguments.of(Named.of("Server error response", SERVER_ERROR_RESPONSE), OpaQueryException.OpaServerError.class, "returned status 500"),
-                Arguments.of(Named.of("Malformed JSON response", MALFORMED_RESPONSE), OpaQueryException.class, "Failed to deserialize"));
-    }
-
-    public static Stream<Arguments> allErrorCasesArgumentProvider()
-    {
-        // All possible failure scenarios, including a well-formed access denied response
-        return Stream.concat(
-                illegalResponseArgumentProvider(),
-                Stream.of(Arguments.of(Named.of("No access response", NO_ACCESS_RESPONSE), AccessDeniedException.class, "Access Denied")));
-    }
-
-    public static SystemSecurityContext systemSecurityContextFromIdentity(Identity identity) {
-        return new SystemSecurityContext(identity, new QueryIdGenerator().createNextQueryId(), Instant.now());
-    }
+    public static final URI OPA_SERVER_URI = URI.create("http://my-uri/");
+    public static final URI OPA_SERVER_BATCH_URI = URI.create("http://my-batch-uri/");
+    public static final Identity TEST_IDENTITY = Identity.forUser("source-user").withGroups(ImmutableSet.of("some-group")).build();
+    public static final SystemSecurityContext TEST_SECURITY_CONTEXT = new SystemSecurityContext(TEST_IDENTITY, new QueryIdGenerator().createNextQueryId(), Instant.now());
 
     public abstract static class MethodWrapper {
         public abstract boolean isAccessAllowed(OpaAccessControl opaAccessControl);
@@ -163,6 +121,46 @@ public final class TestHelpers
                         .buildOrThrow(),
                 Optional.of(mockHttpClient),
                 Optional.of(SYSTEM_ACCESS_CONTROL_CONTEXT));
+    }
+
+    public static void assertAccessControlMethodThrowsForIllegalResponses(Consumer<OpaAccessControl> methodToTest)
+    {
+        runIllegalResponseTestCases(methodToTest, TestHelpers::buildAuthorizerWithPredefinedResponse);
+    }
+
+    public static void assertBatchAccessControlMethodThrowsForIllegalResponses(Consumer<OpaAccessControl> methodToTest)
+    {
+        runIllegalResponseTestCases(methodToTest, TestHelpers::buildBatchAuthorizerWithPredefinedResponse);
+    }
+
+    private static void runIllegalResponseTestCases(
+            Consumer<OpaAccessControl> methodToTest,
+            Function<MockResponse, OpaAccessControl> authorizerBuilder)
+    {
+        assertAccessControlMethodThrows(() -> methodToTest.accept(authorizerBuilder.apply(UNDEFINED_RESPONSE)), OpaQueryException.OpaServerError.PolicyNotFound.class, "did not return a value");
+        assertAccessControlMethodThrows(() -> methodToTest.accept(authorizerBuilder.apply(BAD_REQUEST_RESPONSE)), OpaQueryException.OpaServerError.class, "returned status 400");
+        assertAccessControlMethodThrows(() -> methodToTest.accept(authorizerBuilder.apply(SERVER_ERROR_RESPONSE)), OpaQueryException.OpaServerError.class, "returned status 500");
+        assertAccessControlMethodThrows(() -> methodToTest.accept(authorizerBuilder.apply(MALFORMED_RESPONSE)), OpaQueryException.class, "Failed to deserialize");
+    }
+
+    private static OpaAccessControl buildAuthorizerWithPredefinedResponse(MockResponse response)
+    {
+        return createOpaAuthorizer(OPA_SERVER_URI, createMockHttpClient(OPA_SERVER_URI, request -> response));
+    }
+
+    public static OpaAccessControl buildBatchAuthorizerWithPredefinedResponse(MockResponse response)
+    {
+        return createOpaAuthorizer(OPA_SERVER_URI, OPA_SERVER_BATCH_URI, createMockHttpClient(OPA_SERVER_BATCH_URI, request -> response));
+    }
+
+    public static void assertAccessControlMethodThrows(
+            Runnable methodToTest,
+            Class<? extends OpaQueryException> expectedException,
+            String expectedErrorMessage)
+    {
+        assertThatThrownBy(methodToTest::run)
+                .isInstanceOf(expectedException)
+                .hasMessageContaining(expectedErrorMessage);
     }
 
     static final class TestingSystemAccessControlContext
