@@ -29,8 +29,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import static io.trino.plugin.opa.TestHelpers.SYSTEM_ACCESS_CONTROL_CONTEXT;
-import static io.trino.plugin.opa.TestHelpers.TEST_SECURITY_CONTEXT;
+import static io.trino.plugin.opa.TestConstants.SYSTEM_ACCESS_CONTROL_CONTEXT;
+import static io.trino.plugin.opa.TestConstants.TEST_SECURITY_CONTEXT;
 import static io.trino.plugin.opa.TestHelpers.createMockHttpClient;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

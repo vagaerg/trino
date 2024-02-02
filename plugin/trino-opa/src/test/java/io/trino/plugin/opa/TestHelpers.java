@@ -15,72 +15,52 @@ package io.trino.plugin.opa;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.trace.Tracer;
-import io.trino.execution.QueryIdGenerator;
 import io.trino.plugin.opa.HttpClientUtils.InstrumentedHttpClient;
 import io.trino.plugin.opa.HttpClientUtils.MockResponse;
 import io.trino.spi.security.AccessDeniedException;
-import io.trino.spi.security.Identity;
-import io.trino.spi.security.SystemAccessControlFactory;
-import io.trino.spi.security.SystemSecurityContext;
 
 import java.net.URI;
-import java.time.Instant;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.google.common.net.MediaType.JSON_UTF_8;
+import static io.trino.plugin.opa.TestConstants.BAD_REQUEST_RESPONSE;
+import static io.trino.plugin.opa.TestConstants.MALFORMED_RESPONSE;
+import static io.trino.plugin.opa.TestConstants.OPA_SERVER_BATCH_URI;
+import static io.trino.plugin.opa.TestConstants.OPA_SERVER_URI;
+import static io.trino.plugin.opa.TestConstants.SERVER_ERROR_RESPONSE;
+import static io.trino.plugin.opa.TestConstants.SYSTEM_ACCESS_CONTROL_CONTEXT;
+import static io.trino.plugin.opa.TestConstants.UNDEFINED_RESPONSE;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public final class TestHelpers
 {
     private TestHelpers() {}
 
-    public static final MockResponse OK_RESPONSE = new MockResponse("""
-            {
-                "decision_id": "",
-                "result": true
-            }
-            """,
-            200);
-    public static final MockResponse NO_ACCESS_RESPONSE = new MockResponse("""
-            {
-                "decision_id": "",
-                "result": false
-            }
-            """,
-            200);
-    public static final MockResponse MALFORMED_RESPONSE = new MockResponse("""
-            { "this"": is broken_json; }
-            """,
-            200); public static final MockResponse UNDEFINED_RESPONSE = new MockResponse("{}", 404); public static final MockResponse BAD_REQUEST_RESPONSE = new MockResponse("{}", 400);
-    public static final MockResponse SERVER_ERROR_RESPONSE = new MockResponse("", 500);
-    public static final SystemAccessControlFactory.SystemAccessControlContext SYSTEM_ACCESS_CONTROL_CONTEXT = new TestingSystemAccessControlContext("TEST_VERSION");
-    public static final URI OPA_SERVER_URI = URI.create("http://my-uri/");
-    public static final URI OPA_SERVER_BATCH_URI = URI.create("http://my-batch-uri/");
-    public static final Identity TEST_IDENTITY = Identity.forUser("source-user").withGroups(ImmutableSet.of("some-group")).build();
-    public static final SystemSecurityContext TEST_SECURITY_CONTEXT = new SystemSecurityContext(TEST_IDENTITY, new QueryIdGenerator().createNextQueryId(), Instant.now());
-
-    public abstract static class MethodWrapper {
+    public abstract static class MethodWrapper
+    {
         public abstract boolean isAccessAllowed(OpaAccessControl opaAccessControl);
     }
 
-    public static class ThrowingMethodWrapper extends MethodWrapper {
+    public static class ThrowingMethodWrapper
+            extends MethodWrapper
+    {
         private final Consumer<OpaAccessControl> callable;
 
-        public ThrowingMethodWrapper(Consumer<OpaAccessControl> callable) {
+        public ThrowingMethodWrapper(Consumer<OpaAccessControl> callable)
+        {
             this.callable = callable;
         }
 
         @Override
-        public boolean isAccessAllowed(OpaAccessControl opaAccessControl) {
+        public boolean isAccessAllowed(OpaAccessControl opaAccessControl)
+        {
             try {
                 this.callable.accept(opaAccessControl);
                 return true;
-            } catch (AccessDeniedException e) {
+            }
+            catch (AccessDeniedException e) {
                 if (!e.getMessage().contains("Access Denied")) {
                     throw new AssertionError("Expected AccessDenied exception to contain 'Access Denied' in the message");
                 }
@@ -89,15 +69,19 @@ public final class TestHelpers
         }
     }
 
-    public static class ReturningMethodWrapper extends MethodWrapper {
+    public static class ReturningMethodWrapper
+            extends MethodWrapper
+    {
         private final Function<OpaAccessControl, Boolean> callable;
 
-        public ReturningMethodWrapper(Function<OpaAccessControl, Boolean> callable) {
+        public ReturningMethodWrapper(Function<OpaAccessControl, Boolean> callable)
+        {
             this.callable = callable;
         }
 
         @Override
-        public boolean isAccessAllowed(OpaAccessControl opaAccessControl) {
+        public boolean isAccessAllowed(OpaAccessControl opaAccessControl)
+        {
             return this.callable.apply(opaAccessControl);
         }
     }
@@ -161,34 +145,5 @@ public final class TestHelpers
         assertThatThrownBy(methodToTest::run)
                 .isInstanceOf(expectedException)
                 .hasMessageContaining(expectedErrorMessage);
-    }
-
-    static final class TestingSystemAccessControlContext
-        implements SystemAccessControlFactory.SystemAccessControlContext
-    {
-        private final String trinoVersion;
-
-        public TestingSystemAccessControlContext(String version)
-        {
-            this.trinoVersion = version;
-        }
-
-        @Override
-        public String getVersion()
-        {
-            return this.trinoVersion;
-        }
-
-        @Override
-        public OpenTelemetry getOpenTelemetry()
-        {
-            return null;
-        }
-
-        @Override
-        public Tracer getTracer()
-        {
-            return null;
-        }
     }
 }
