@@ -17,7 +17,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.trino.plugin.opa.HttpClientUtils.InstrumentedHttpClient;
 import io.trino.plugin.opa.HttpClientUtils.MockResponse;
-import io.trino.spi.security.AccessDeniedException;
 
 import java.net.URI;
 import java.util.Optional;
@@ -37,54 +36,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public final class TestHelpers
 {
     private TestHelpers() {}
-
-    public abstract static class MethodWrapper
-    {
-        public abstract boolean isAccessAllowed(OpaAccessControl opaAccessControl);
-    }
-
-    public static class ThrowingMethodWrapper
-            extends MethodWrapper
-    {
-        private final Consumer<OpaAccessControl> callable;
-
-        public ThrowingMethodWrapper(Consumer<OpaAccessControl> callable)
-        {
-            this.callable = callable;
-        }
-
-        @Override
-        public boolean isAccessAllowed(OpaAccessControl opaAccessControl)
-        {
-            try {
-                this.callable.accept(opaAccessControl);
-                return true;
-            }
-            catch (AccessDeniedException e) {
-                if (!e.getMessage().contains("Access Denied")) {
-                    throw new AssertionError("Expected AccessDenied exception to contain 'Access Denied' in the message");
-                }
-                return false;
-            }
-        }
-    }
-
-    public static class ReturningMethodWrapper
-            extends MethodWrapper
-    {
-        private final Function<OpaAccessControl, Boolean> callable;
-
-        public ReturningMethodWrapper(Function<OpaAccessControl, Boolean> callable)
-        {
-            this.callable = callable;
-        }
-
-        @Override
-        public boolean isAccessAllowed(OpaAccessControl opaAccessControl)
-        {
-            return this.callable.apply(opaAccessControl);
-        }
-    }
 
     public static InstrumentedHttpClient createMockHttpClient(URI expectedUri, Function<JsonNode, MockResponse> handler)
     {

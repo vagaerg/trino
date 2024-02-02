@@ -15,9 +15,11 @@ package io.trino.plugin.opa;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.trino.plugin.opa.AccessControlMethodHelpers.MethodWrapper;
+import io.trino.plugin.opa.AccessControlMethodHelpers.ReturningMethodWrapper;
+import io.trino.plugin.opa.AccessControlMethodHelpers.ThrowingMethodWrapper;
 import io.trino.plugin.opa.HttpClientUtils.InstrumentedHttpClient;
 import io.trino.plugin.opa.TestConstants.TestingSystemAccessControlContext;
-import io.trino.plugin.opa.TestHelpers.MethodWrapper;
 import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.spi.connector.CatalogSchemaRoutineName;
 import io.trino.spi.connector.CatalogSchemaTableName;
@@ -74,7 +76,7 @@ public class TestOpaAccessControl
                 {
                     "operation": "%s"
                 }""".formatted(actionName));
-        TestHelpers.ThrowingMethodWrapper wrappedMethod = new TestHelpers.ThrowingMethodWrapper(accessControl -> method.accept(accessControl, TEST_IDENTITY));
+        ThrowingMethodWrapper wrappedMethod = new ThrowingMethodWrapper(accessControl -> method.accept(accessControl, TEST_IDENTITY));
         assertAccessControlMethodBehaviour(wrappedMethod, expectedRequests);
     }
 
@@ -104,7 +106,7 @@ public class TestOpaAccessControl
             FunctionalHelpers.Consumer3<OpaAccessControl, SystemSecurityContext, CatalogSchemaTableName> callable)
     {
         CatalogSchemaTableName tableName = new CatalogSchemaTableName("my_catalog", "my_schema", "my_table");
-        TestHelpers.ThrowingMethodWrapper wrappedMethod = new TestHelpers.ThrowingMethodWrapper(
+        ThrowingMethodWrapper wrappedMethod = new ThrowingMethodWrapper(
                 accessControl -> callable.accept(accessControl, TEST_SECURITY_CONTEXT, tableName));
         String expectedRequest = """
                 {
@@ -144,7 +146,7 @@ public class TestOpaAccessControl
                 .put("empty_item", Optional.empty())
                 .put("boxed_number_item", Optional.of(Integer.valueOf(32)))
                 .buildOrThrow();
-        TestHelpers.ThrowingMethodWrapper wrappedMethod = new TestHelpers.ThrowingMethodWrapper(
+        ThrowingMethodWrapper wrappedMethod = new ThrowingMethodWrapper(
                 accessControl -> callable.accept(accessControl, TEST_SECURITY_CONTEXT, table, properties));
         String expectedRequest = """
                 {
@@ -180,7 +182,7 @@ public class TestOpaAccessControl
         Identity dummyIdentity = Identity.forUser("dummy-user")
                 .withGroups(ImmutableSet.of("some-group"))
                 .build();
-        TestHelpers.ThrowingMethodWrapper wrappedMethod = new TestHelpers.ThrowingMethodWrapper(
+        ThrowingMethodWrapper wrappedMethod = new ThrowingMethodWrapper(
                 accessControl -> callable.accept(accessControl, TEST_IDENTITY, dummyIdentity));
 
         String expectedRequest = """
@@ -211,7 +213,7 @@ public class TestOpaAccessControl
             String resourceName,
             FunctionalHelpers.Consumer3<OpaAccessControl, SystemSecurityContext, String> callable)
     {
-        TestHelpers.ThrowingMethodWrapper wrappedMethod = new TestHelpers.ThrowingMethodWrapper(
+        ThrowingMethodWrapper wrappedMethod = new ThrowingMethodWrapper(
                 accessControl -> callable.accept(accessControl, TEST_SECURITY_CONTEXT, "resource_name"));
         String expectedRequest = """
                 {
@@ -240,14 +242,14 @@ public class TestOpaAccessControl
                 }
                 """;
         assertAccessControlMethodBehaviour(
-                new TestHelpers.ThrowingMethodWrapper(accessControl -> accessControl.checkCanImpersonateUser(TEST_IDENTITY, "some_other_user")),
+                new ThrowingMethodWrapper(accessControl -> accessControl.checkCanImpersonateUser(TEST_IDENTITY, "some_other_user")),
                 ImmutableSet.of(expectedRequest));
     }
 
     @Test
     public void testCanAccessCatalog()
     {
-        TestHelpers.ReturningMethodWrapper wrappedMethod = new TestHelpers.ReturningMethodWrapper(
+        ReturningMethodWrapper wrappedMethod = new ReturningMethodWrapper(
                 accessControl -> accessControl.canAccessCatalog(TEST_SECURITY_CONTEXT, "test_catalog"));
         String expectedRequest = """
                 {
@@ -274,7 +276,7 @@ public class TestOpaAccessControl
             String actionName,
             FunctionalHelpers.Consumer3<OpaAccessControl, SystemSecurityContext, CatalogSchemaName> callable)
     {
-        TestHelpers.ThrowingMethodWrapper wrappedMethod = new TestHelpers.ThrowingMethodWrapper(
+        ThrowingMethodWrapper wrappedMethod = new ThrowingMethodWrapper(
                 accessControl -> callable.accept(accessControl, TEST_SECURITY_CONTEXT, new CatalogSchemaName("my_catalog", "my_schema")));
 
         String expectedRequest = """
@@ -295,7 +297,7 @@ public class TestOpaAccessControl
     public void testCreateSchema()
     {
         CatalogSchemaName schema = new CatalogSchemaName("my_catalog", "my_schema");
-        TestHelpers.ThrowingMethodWrapper wrappedMethod = new TestHelpers.ThrowingMethodWrapper(
+        ThrowingMethodWrapper wrappedMethod = new ThrowingMethodWrapper(
                 accessControl -> accessControl.checkCanCreateSchema(TEST_SECURITY_CONTEXT, schema, ImmutableMap.of()));
         String expectedRequest = """
                 {
@@ -316,7 +318,7 @@ public class TestOpaAccessControl
     {
 
         CatalogSchemaName schema = new CatalogSchemaName("my_catalog", "my_schema");
-        TestHelpers.ThrowingMethodWrapper wrappedMethod = new TestHelpers.ThrowingMethodWrapper(
+        ThrowingMethodWrapper wrappedMethod = new ThrowingMethodWrapper(
                 accessControl -> accessControl.checkCanCreateSchema(TEST_SECURITY_CONTEXT, schema, ImmutableMap.of("some_key", "some_value")));
         String expectedRequest = """
                 {
@@ -337,7 +339,7 @@ public class TestOpaAccessControl
     @Test
     public void testRenameSchema()
     {
-        TestHelpers.ThrowingMethodWrapper wrappedMethod = new TestHelpers.ThrowingMethodWrapper(accessControl -> accessControl.checkCanRenameSchema(
+        ThrowingMethodWrapper wrappedMethod = new ThrowingMethodWrapper(accessControl -> accessControl.checkCanRenameSchema(
                 TEST_SECURITY_CONTEXT,
                 new CatalogSchemaName("my_catalog", "my_schema"), "new_schema_name"));
         String expectedRequest = """
@@ -374,7 +376,7 @@ public class TestOpaAccessControl
     {
         CatalogSchemaTableName sourceTable = new CatalogSchemaTableName("my_catalog", "my_schema", "my_table");
         CatalogSchemaTableName targetTable = new CatalogSchemaTableName("my_catalog", "new_schema_name", "new_table_name");
-        TestHelpers.ThrowingMethodWrapper wrappedMethod = new TestHelpers.ThrowingMethodWrapper(
+        ThrowingMethodWrapper wrappedMethod = new ThrowingMethodWrapper(
                 accessControl -> method.accept(accessControl, TEST_SECURITY_CONTEXT, sourceTable, targetTable));
 
         String expectedRequest = """
@@ -405,7 +407,7 @@ public class TestOpaAccessControl
         CatalogSchemaName schema = new CatalogSchemaName("my_catalog", "my_schema");
         TrinoPrincipal principal = new TrinoPrincipal(PrincipalType.USER, "my_user");
 
-        TestHelpers.ThrowingMethodWrapper methodWrapper = new TestHelpers.ThrowingMethodWrapper(
+        ThrowingMethodWrapper methodWrapper = new ThrowingMethodWrapper(
                 accessControl -> accessControl.checkCanSetSchemaAuthorization(TEST_SECURITY_CONTEXT, schema, principal));
 
         String expectedRequest = """
@@ -439,7 +441,7 @@ public class TestOpaAccessControl
     {
         CatalogSchemaTableName table = new CatalogSchemaTableName("my_catalog", "my_schema", "my_table");
         TrinoPrincipal principal = new TrinoPrincipal(PrincipalType.USER, "my_user");
-        TestHelpers.ThrowingMethodWrapper wrappedMethod = new TestHelpers.ThrowingMethodWrapper(
+        ThrowingMethodWrapper wrappedMethod = new ThrowingMethodWrapper(
                 accessControl -> method.accept(accessControl, TEST_SECURITY_CONTEXT, table, principal));
 
         String expectedRequest = """
@@ -481,7 +483,7 @@ public class TestOpaAccessControl
     {
         CatalogSchemaTableName table = new CatalogSchemaTableName("my_catalog", "my_schema", "my_table");
         String dummyColumnName = "my_column";
-        TestHelpers.ThrowingMethodWrapper wrappedMethod = new TestHelpers.ThrowingMethodWrapper(
+        ThrowingMethodWrapper wrappedMethod = new ThrowingMethodWrapper(
                 accessControl -> method.accept(accessControl, TEST_SECURITY_CONTEXT, table, ImmutableSet.of(dummyColumnName)));
         String expectedRequest = """
                 {
@@ -507,7 +509,7 @@ public class TestOpaAccessControl
     @Test
     public void testCanSetCatalogSessionProperty()
     {
-        TestHelpers.ThrowingMethodWrapper wrappedMethod = new TestHelpers.ThrowingMethodWrapper(
+        ThrowingMethodWrapper wrappedMethod = new ThrowingMethodWrapper(
                 accessControl -> accessControl.checkCanSetCatalogSessionProperty(TEST_SECURITY_CONTEXT, "my_catalog", "my_property"));
         String expectedRequest = """
                 {
@@ -539,19 +541,19 @@ public class TestOpaAccessControl
                     }
                 }""";
         assertAccessControlMethodBehaviour(
-                new TestHelpers.ThrowingMethodWrapper(authorizer -> authorizer.checkCanExecuteProcedure(TEST_SECURITY_CONTEXT, routine)),
+                new ThrowingMethodWrapper(authorizer -> authorizer.checkCanExecuteProcedure(TEST_SECURITY_CONTEXT, routine)),
                 ImmutableSet.of(baseRequest.formatted("ExecuteProcedure")));
         assertAccessControlMethodBehaviour(
-                new TestHelpers.ThrowingMethodWrapper(authorizer -> authorizer.checkCanCreateFunction(TEST_SECURITY_CONTEXT, routine)),
+                new ThrowingMethodWrapper(authorizer -> authorizer.checkCanCreateFunction(TEST_SECURITY_CONTEXT, routine)),
                 ImmutableSet.of(baseRequest.formatted("CreateFunction")));
         assertAccessControlMethodBehaviour(
-                new TestHelpers.ThrowingMethodWrapper(authorizer -> authorizer.checkCanDropFunction(TEST_SECURITY_CONTEXT, routine)),
+                new ThrowingMethodWrapper(authorizer -> authorizer.checkCanDropFunction(TEST_SECURITY_CONTEXT, routine)),
                 ImmutableSet.of(baseRequest.formatted("DropFunction")));
         assertAccessControlMethodBehaviour(
-                new TestHelpers.ReturningMethodWrapper(authorizer -> authorizer.canExecuteFunction(TEST_SECURITY_CONTEXT, routine)),
+                new ReturningMethodWrapper(authorizer -> authorizer.canExecuteFunction(TEST_SECURITY_CONTEXT, routine)),
                 ImmutableSet.of(baseRequest.formatted("ExecuteFunction")));
         assertAccessControlMethodBehaviour(
-                new TestHelpers.ReturningMethodWrapper(authorizer -> authorizer.canCreateViewWithExecuteFunction(TEST_SECURITY_CONTEXT, routine)),
+                new ReturningMethodWrapper(authorizer -> authorizer.canCreateViewWithExecuteFunction(TEST_SECURITY_CONTEXT, routine)),
                 ImmutableSet.of(baseRequest.formatted("CreateViewWithExecuteFunction")));
     }
 
@@ -574,7 +576,7 @@ public class TestOpaAccessControl
                     }
                 }""";
         assertAccessControlMethodBehaviour(
-                new TestHelpers.ThrowingMethodWrapper(authorizer -> authorizer.checkCanExecuteTableProcedure(TEST_SECURITY_CONTEXT, table, "my_procedure")),
+                new ThrowingMethodWrapper(authorizer -> authorizer.checkCanExecuteTableProcedure(TEST_SECURITY_CONTEXT, table, "my_procedure")),
                 ImmutableSet.of(expectedRequest));
     }
 
