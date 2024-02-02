@@ -20,6 +20,8 @@ import java.util.function.Function;
 
 public class AccessControlMethodHelpers
 {
+    private AccessControlMethodHelpers() {}
+
     public interface MethodWrapper
     {
         boolean isAccessAllowed(OpaAccessControl opaAccessControl);
